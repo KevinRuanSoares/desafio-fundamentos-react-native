@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 
 import AsyncStorage from '@react-native-community/async-storage';
+import { Alert } from 'react-native';
 
 interface Product {
   id: string;
@@ -42,19 +43,44 @@ const CartProvider: React.FC = ({ children }) => {
   const addToCart = useCallback(async product => {
     const productExists = products.find(p => p.id === product.id);
     if (productExists) {
-      product.map((p: Product) => p.id === product.id ? { ...product, quantity: p.quantity + 1 } : p);
+      setProducts(products.map((p: Product) => 
+        p.id === product.id ? { ...product, quantity: p.quantity + 1 } : p,
+      ));
     } else {
       setProducts([...products, { ...product, quantity: 1 }]);
     }
-  }, []);
+    await AsyncStorage.setItem('@GoMarketplace:products', JSON.stringify(products));
+  }, [products]);
 
   const increment = useCallback(async id => {
-    // TODO INCREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+    setProducts(products.map((product: Product) => 
+      product.id === id ? { ...product, quantity: product.quantity + 1 } : product,
+    ));
+    await AsyncStorage.setItem('@GoMarketplace:products', JSON.stringify(products));
+  }, [products]);
 
   const decrement = useCallback(async id => {
-    // TODO DECREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+    const verifyProductQuantity = products.find(p => p.id === id);
+    if (verifyProductQuantity && verifyProductQuantity?.quantity > 1) {
+      setProducts(products.map((product: Product) => 
+        product.id === id ? { ...product, quantity: product.quantity - 1 } : product,
+      ));
+    }else{
+      Alert.alert(
+        'Remover Produto',
+        'Deseja remover o produto do seu carrinho?😢',
+        [
+          {text: 'Não', onPress: () => {
+            return;
+          }, style: 'cancel'},
+          {text: 'Sim', onPress: () => {
+            setProducts(products.filter(product => product.id !== id));
+          }},
+        ]
+      );
+    }
+    await AsyncStorage.setItem('@GoMarketplace:products', JSON.stringify(products));
+  }, [products]);
 
   const value = React.useMemo(
     () => ({ addToCart, increment, decrement, products }),
